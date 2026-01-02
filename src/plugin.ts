@@ -31,10 +31,23 @@ export const PTYPlugin = async (
       }
 
       if (event.type === "session.deleted") {
-        const sessionId = (event as { properties: { info: { id: string } } }).properties?.info?.id;
-        if (sessionId) {
+        // Use proper optional chaining instead of type casting
+        const sessionId = event.properties?.info?.id;
+        
+        // Validate session ID exists and is a string
+        if (!sessionId || typeof sessionId !== 'string') {
+          log.warn("Invalid session ID in session.deleted event", { sessionId });
+          return;
+        }
+
+        try {
           log.info("cleaning up PTYs for deleted session", { sessionId });
           manager.cleanupBySession(sessionId);
+        } catch (error) {
+          log.error("Failed to cleanup PTYs for session", { 
+            sessionId, 
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
       }
     },
